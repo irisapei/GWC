@@ -1,0 +1,148 @@
+from tkinter import *
+import random
+def init(data):
+    data.mode = "Start Screen"
+    #data.timerDelay = 10
+    data.score = 0
+    data.hummus = PhotoImage(file="hummus.gif")
+    data.initialXCoordinate = random.randint(0,data.width) #100
+    data.initialYCoordinate = random.randint(0,data.height) #150
+    data.appearingHummus = (data.initialXCoordinate, data.initialYCoordinate)
+    #data.collision = False
+    data.cx = 250
+    data.cy = 250
+    data.playerRadius = 25
+    data.hummusRadius = 40
+    data.timer = 20
+    data.obstacleCX1 = 200
+    data.obstacleCY1 = 200
+    data.obstacleRadius = 10
+    data.lives = 3
+    #data.player = [data.playerX, data.playerY]
+def mousePressed(event,data):
+    data.cx = event.x
+    data.cy = event.y
+
+def keyPressed(event,data):
+    if event.keysym == "H" or event.keysym == "h":
+        data.mode = "Help"
+    elif event.keysym == "R" or event.keysym == "r":
+        data.mode = "Start Screen"
+    elif event.keysym == "S" or event.keysym == "s":
+        data.mode = "Play Game"
+        #print ("reached")
+    elif event.keysym == "Right":
+        data.cx +=20
+        #data.playerX2+=20
+    elif event.keysym == "Left":
+        data.cx-=20
+        #data.playerX2 -=20
+    elif event.keysym == "Up":
+        data.cy -= 20
+        #data.playerY2 -= 20
+    elif event.keysym == "Down":
+        data.cy+=20
+        #data.playerY2+=20
+    if collision(data.initialXCoordinate, data.cx, data.initialYCoordinate,data.cy, data.hummusRadius, data.playerRadius):
+        #if collision of hummus and player occurs
+        data.initialXCoordinate = random.randint(0,data.width)
+        data.initialYCoordinate = random.randint(0,data.height)
+        data.appearingHummus = (data.initialXCoordinate, data.initialYCoordinate)
+        data.score+=1
+    if collision(data.obstacleCX1, data.cx, data.obstacleCY1,data.cy, data.playerRadius,data.obstacleRadius):
+        data.lives -=1
+        if data.lives<=0:
+            data.mode = "End Game"
+def timerFired(data):
+    data.timer-=1
+    if data.timer == 0:
+        data.mode = "End Game"
+
+def redrawAll(canvas, data):
+    #############################
+    if data.mode == "Start Screen":
+        canvas.create_rectangle(0,0,data.width,data.height, fill = "lavender")
+        canvas.create_text(200,200, text = "WELCOME TO HUMMUS HITTER",
+            font = "Monaco 20")
+        canvas.create_text(250,350, text = "Press S to start playing!",
+            font = "Monaco 20")
+        canvas.create_text(250,400, text = "Press H for help on how to play!",
+            font = "Monaco 20")
+    ##############################
+    elif data.mode == "Help":
+        canvas.create_rectangle(0,0,data.width,data.height, fill = "lavender")
+        canvas.create_text(200,100, text = "Move your icon and try to hit the hummus.")
+        canvas.create_text(200,200, text = "Hitting the hummus will get you a point.")
+        canvas.create_text(200,300, text = "You get 20 seconds to hit as many hummi as possible.")
+        #canvas.create_text(200,400, text = "You'll get a second back on the clock for every 5 crocs you click!")
+    ##############################
+    elif data.mode == "Play Game":
+        canvas.create_rectangle(0,0,data.width,data.height, fill = "light pink")
+        canvas.create_oval(data.obstacleCX1-data.obstacleRadius, data.obstacleCY1-data.obstacleRadius,
+            data.obstacleCX1+data.obstacleRadius, data.obstacleCY1+data.obstacleRadius, fill = "green")
+        canvas.create_oval(data.appearingHummus[0]-data.hummusRadius,
+            data.appearingHummus[1]-data.hummusRadius, data.appearingHummus[0]+data.hummusRadius,
+            data.appearingHummus[1]+data.hummusRadius, fill = "goldenrod")
+        canvas.create_oval(data.cx-data.playerRadius, data.cy-data.playerRadius,
+            data.cx+data.playerRadius, data.cy+data.playerRadius, fill = "blue")
+        canvas.create_text(100,100, text = data.timer)
+        canvas.create_text(200,100, text = ("score "+ str(data.score)))
+        canvas.create_text(300,100, text = ("lives "+ str(data.lives)))
+    elif data.mode == "End Game":
+        canvas.create_rectangle(0,0, data.width,data.height, fill = "black")
+        canvas.create_text(100,100, text = "times up!!!!", fill = "white")
+
+
+def collision(x1,x2,y1,y2,r1,r2):
+    distance = (((y2-y1)**2)+((x2-x1)**2))**0.5
+    if distance < r1+r2:
+        return True
+    return False
+
+####################################
+# use the run function as-is
+####################################
+
+def run(width=300, height=300):
+    def redrawAllWrapper(canvas, data):
+        canvas.delete(ALL)
+        canvas.create_rectangle(0, 0, data.width, data.height,
+                                fill='white', width=0)
+        redrawAll(canvas, data)
+        canvas.update()
+
+    def mousePressedWrapper(event, canvas, data):
+        mousePressed(event, data)
+        redrawAllWrapper(canvas, data)
+
+    def keyPressedWrapper(event, canvas, data):
+        keyPressed(event, data)
+        redrawAllWrapper(canvas, data)
+
+    def timerFiredWrapper(canvas, data):
+        timerFired(data)
+        redrawAllWrapper(canvas, data)
+        # pause, then call timerFired again
+        canvas.after(data.timerDelay, timerFiredWrapper, canvas, data)
+    # Set up data and call init
+    class Struct(object): pass
+    data = Struct()
+    data.width = width
+    data.height = height
+    data.timerDelay = 1000 # milliseconds
+    root = Tk()
+    init(data)
+    # create the root and the canvas
+    canvas = Canvas(root, width=data.width, height=data.height)
+    canvas.pack()
+    # set up events
+    root.bind("<Button-1>", lambda event:
+                            mousePressedWrapper(event, canvas, data))
+    root.bind("<Key>", lambda event:
+                            keyPressedWrapper(event, canvas, data))
+    timerFiredWrapper(canvas, data)
+    # and launch the app
+    root.mainloop()  # blocks until window is closed
+    print("bye!")
+
+run(500,500)
